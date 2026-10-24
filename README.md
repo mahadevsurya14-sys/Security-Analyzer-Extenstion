@@ -320,10 +320,6 @@ security-analyzer/
     └── test_manifest_and_fingerprints.py
 ```
 
-- **Verified Total Files**: **30 files**
-- **Strict Limit**: $\le$ 99 files
-- **Remaining Allowance**: **69 files**
-
 ---
 
 ## 📜 Ethical Scope & Disclaimer
