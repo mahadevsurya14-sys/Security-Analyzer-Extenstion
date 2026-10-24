@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-branding">
+        <img src="../assets/icon48.png" alt="Logo" class="app-logo">
+        <div class="brand-text">
+          <h1 class="app-title">Security Analyzer</h1>
+          <span class="app-tagline">Passive Cybersecurity Audit & Intel</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="headerScoreBadge" class="score-badge grade-unknown">--</div>
+        <button id="rescanBtn" class="btn btn-icon" title="Rerun Page Audit">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Target Bar -->
+    <div class="target-bar">
+      <div class="target-indicator">
+        <span class="pulse-dot"></span>
+        <span id="targetUrlText" class="target-url" title="Active Tab URL">Detecting active tab...</span>
+      </div>
+      <span id="scanTimestamp" class="target-time">Just now</span>
+    </div>
+
+    <!-- Prominent Language Summary Bar -->
+    <div class="lang-summary-bar">
+      <span class="lang-bar-label">LANGUAGES:</span>
+      <div id="langBannerBadges" class="lang-badges-row">
+        <span class="lang-mini-badge badge-loading">Detecting languages...</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="tab-overview">Overview</button>
+      <button class="nav-tab" data-tab="tab-techs">Techs <span id="techBadge" class="tab-count">0</span></button>
+      <button class="nav-tab" data-tab="tab-versions">Versions</button>
+      <button class="nav-tab" data-tab="tab-security">Security <span id="secBadge" class="tab-count">0</span></button>
+      <button class="nav-tab" data-tab="tab-vulns">CVE Intel <span id="vulnBadge" class="tab-count">0</span></button>
+      <button class="nav-tab" data-tab="tab-deep">Deep Scan</button>
+      <button class="nav-tab" data-tab="tab-export">Export</button>
+      <button class="nav-tab" data-tab="tab-settings">Settings</button>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div id="loadingState" class="state-view loading-view hidden">
+      <div class="cyber-spinner"></div>
+      <h3 class="state-title">Auditing Web Surface</h3>
+      <p id="loadingMsg" class="state-desc">Analyzing headers, DOM fingerprints, and security configurations...</p>
+    </div>
+
+    <!-- Error View -->
+    <div id="errorState" class="state-view error-view hidden">
+      <div class="state-icon error-icon">!</div>
+      <h3 class="state-title">Inspection Not Supported</h3>
+      <p id="errorMsg" class="state-desc">Cannot inspect restricted browser pages (e.g. chrome:// or edge://). Please navigate to a standard web page.</p>
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button id="retryBtn" class="btn btn-secondary">Retry Inspection</button>
+        <button id="openDemoBtn" class="btn btn-primary">Open Sample Site (WordPress.org)</button>
+      </div>
+    </div>
+
+    <!-- Main Content Panels -->
+    <main class="app-body">
+      <!-- 1. Overview Tab -->
+      <section id="tab-overview" class="tab-content active">
+        <div class="overview-grid">
+          <div class="score-card">
+            <div class="score-circle">
+              <span id="overviewScoreNum" class="score-number">--</span>
+              <span class="score-max">/100</span>
+            </div>
+            <div class="score-meta">
+              <span class="meta-label">Security Posture</span>
+              <h2 id="overviewGradeText" class="grade-text">Grade --</h2>
+              <span id="overviewRatingDesc" class="meta-sub">Audit pending</span>
+            </div>
+          </div>
+
+          <div class="metric-counters">
+            <div class="counter-box">
+              <span id="cntTechs" class="cnt-val">0</span>
+              <span class="cnt-label">Technologies</span>
+            </div>
+            <div class="counter-box">
+              <span id="cntLanguages" class="cnt-val" style="color: #38bdf8;">0</span>
+              <span class="cnt-label">Languages</span>
+            </div>
+            <div class="counter-box">
+              <span id="cntFindings" class="cnt-val">0</span>
+              <span class="cnt-label">Security Findings</span>
+            </div>
+            <div class="counter-box">
+              <span id="cntVulns" class="cnt-val">0</span>
+              <span class="cnt-label">CVE Warnings</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dedicated Programming Languages Feature Card -->
+        <div class="section-card language-feature-card">
+          <h3 class="section-heading">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            Programming Languages Detected
+          </h3>
+          <div id="overviewLanguageList" class="languages-grid">
+            <span class="empty-hint">Scanning page for programming languages...</span>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-heading">Quick Security Findings Breakdown</h3>
+          <div class="severity-bars">
+            <div class="sev-bar-item">
+              <span class="sev-chip chip-critical">Critical</span>
+              <span id="sevCntCritical" class="sev-count">0</span>
+            </div>
+            <div class="sev-bar-item">
+              <span class="sev-chip chip-high">High</span>
+              <span id="sevCntHigh" class="sev-count">0</span>
+            </div>
+            <div class="sev-bar-item">
+              <span class="sev-chip chip-medium">Medium</span>
+              <span id="sevCntMedium" class="sev-count">0</span>
+            </div>
+            <div class="sev-bar-item">
+              <span class="sev-chip chip-low">Low</span>
+              <span id="sevCntLow" class="sev-count">0</span>
+            </div>
+            <div class="sev-bar-item">
+              <span class="sev-chip chip-info">Info</span>
+              <span id="sevCntInfo" class="sev-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-heading">Identified Core Stack</h3>
+          <div id="overviewStackList" class="stack-tags">
+            <span class="empty-hint">No technologies detected yet.</span>
+          </div>
+        </div>
+
+        <div class="disclaimer-banner">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>Automated passive analysis. Does not perform penetration testing or exploit validation.</span>
+        </div>
+      </section>
+
+      <!-- 2. Technologies Tab -->
+      <section id="tab-techs" class="tab-content">
+        <div class="filter-controls">
+          <input type="text" id="techSearchInput" class="search-input" placeholder="Search technologies...">
+          <select id="techCategoryFilter" class="select-filter">
+            <option value="ALL">All Categories</option>
+            <option value="JavaScript Framework">JS Frameworks</option>
+            <option value="UI Framework">UI Frameworks / CSS</option>
+            <option value="JavaScript Library">JS Libraries</option>
+            <option value="CMS">CMS & Platforms</option>
+            <option value="Analytics & RUM">Analytics & RUM</option>
+            <option value="Advertising">Advertising</option>
+            <option value="Security Service">Security & Bot Defense</option>
+            <option value="CDN">CDN</option>
+            <option value="Hosting & PaaS">Hosting & PaaS</option>
+            <option value="Web Server">Web Server</option>
+            <option value="Programming Language">Programming Language</option>
+            <option value="API & WebSocket">API & WebSocket</option>
+            <option value="PWA & Performance">PWA & Performance</option>
+          </select>
+        </div>
+        <div id="techsListContainer" class="card-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 3. Versions Tab -->
+      <section id="tab-versions" class="tab-content">
+        <div class="versions-intro">
+          <p class="section-desc">Reliability status of all detected software components:</p>
+          <div class="version-legend">
+            <span class="ver-tag tag-exact">Exact (Confirmed)</span>
+            <span class="ver-tag tag-inferred">Inferred</span>
+            <span class="ver-tag tag-partial">Partial Branch</span>
+            <span class="ver-tag tag-unknown">Unknown</span>
+          </div>
+        </div>
+        <div id="versionsListContainer" class="card-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 4. Security Findings Tab -->
+      <section id="tab-security" class="tab-content">
+        <div class="filter-controls">
+          <input type="text" id="secSearchInput" class="search-input" placeholder="Search findings...">
+          <select id="secSeverityFilter" class="select-filter">
+            <option value="ALL">All Severities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Informational">Informational</option>
+          </select>
+        </div>
+        <div id="securityListContainer" class="card-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 5. Vulnerability Intelligence Tab -->
+      <section id="tab-vulns" class="tab-content">
+        <div class="intel-header-box">
+          <div class="intel-title-row">
+            <span class="intel-badge">NVD & OSV Feed</span>
+            <span id="intelFreshnessText" class="intel-freshness">Dataset: Oct 2026</span>
+          </div>
+          <p class="intel-desc">Correlates fingerprinted component versions against publicly cataloged CVE records. Differentiates potentially affected versions from confirmed exploits.</p>
+        </div>
+        <div id="vulnListContainer" class="card-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 6. Deep Scan Tab -->
+      <section id="tab-deep" class="tab-content">
+        <div class="deep-scan-card">
+          <h3 class="section-heading">Non-Destructive Deep Scan</h3>
+          <p class="section-desc">Performs read-only inspection of accessible page resources, RFC 9116 security.txt, robots.txt administrative path disclosures, and script banners with strict timeouts.</p>
+          
+          <div class="deep-actions">
+            <button id="startDeepScanBtn" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Start Deep Scan
+            </button>
+            <button id="cancelDeepScanBtn" class="btn btn-danger hidden">Cancel Scan</button>
+          </div>
+
+          <div id="deepScanProgressBox" class="deep-progress-box hidden">
+            <div class="progress-bar-bg">
+              <div id="deepProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <span id="deepProgressStatus" class="progress-status-text">Initializing...</span>
+          </div>
+        </div>
+
+        <div id="deepScanResultsContainer" class="card-list mt-3">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- 7. Export Report Tab -->
+      <section id="tab-export" class="tab-content">
+        <div class="export-box">
+          <h3 class="section-heading">Download Assessment Report</h3>
+          <p class="section-desc">Export audit findings, identified technologies, version evidence, and CVE matches for documentation or portfolio presentation.</p>
+          
+          <div class="export-buttons-grid">
+            <div class="export-action-card">
+              <div class="export-icon">{}</div>
+              <h4>JSON Report</h4>
+              <p>Full structured audit dataset with complete evidence arrays and metadata.</p>
+              <button id="exportJsonBtn" class="btn btn-secondary w-full">Export JSON</button>
+            </div>
+            <div class="export-action-card">
+              <div class="export-icon">CSV</div>
+              <h4>CSV Spreadsheet</h4>
+              <p>Tabular matrix of technologies, versions, security findings, and remediation steps.</p>
+              <button id="exportCsvBtn" class="btn btn-secondary w-full">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="privacy-note">
+            <strong>Privacy & Ethics Assurance:</strong> Security Analyzer collects only publicly served headers and DOM structures. No passwords, session tokens, or personal identifiers are stored or exported.
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Settings Tab -->
+      <section id="tab-settings" class="tab-content">
+        <div class="settings-form">
+          <h3 class="section-heading">Extension Configuration</h3>
+          
+          <div class="form-group">
+            <label class="form-label">Optional Python Backend API</label>
+            <input type="text" id="settingBackendUrl" class="text-input" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000">
+            <span class="field-hint">FastAPI backend endpoint for enhanced SSRF-protected server scanning.</span>
+          </div>
+
+          <div class="form-group">
+            <div class="toggle-row">
+              <span class="toggle-label">Use Python Backend When Available</span>
+              <label class="switch">
+                <input type="checkbox" id="settingUseBackend">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <span id="backendStatusPill" class="status-pill pill-offline">Backend Offline</span>
+          </div>
+
+          <div class="form-group">
+            <div class="toggle-row">
+              <span class="toggle-label">Auto-Scan on Tab Activation</span>
+              <label class="switch">
+                <input type="checkbox" id="settingAutoScan" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <span class="field-hint">Automatically analyzes page upon opening the popup.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Deep Scan Timeout (Seconds)</label>
+            <input type="number" id="settingDeepTimeout" class="text-input" min="3" max="30" value="10">
+          </div>
+
+          <div class="form-actions">
+            <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+            <span id="saveNotice" class="save-notice hidden">Saved!</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Bar -->
+    <footer class="app-footer">
+      <span class="footer-left">Security Analyzer v1.0.0</span>
+      <span class="footer-right">Chrome MV3 Safe Passive Audit</span>
+    </footer>
+  </div>
+
+  <!-- Script Modules -->
+  <script src="../engine/version-detector.js"></script>
+  <script src="../engine/detector.js"></script>
+  <script src="../engine/security-analyzer.js"></script>
+  <script src="../engine/vuln-intel.js"></script>
+  <script src="../engine/deep-scanner.js"></script>
+  <script src="../engine/reporter.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
